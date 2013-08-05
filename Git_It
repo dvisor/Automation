@@ -1,0 +1,120 @@
+Git It!
+
+Avoid entering user/pass for GitHub git push/pull requests. Saves time! Energy!
+
+
+1. Create SSH key
+From your home dir, generate a key with the email address used at github.com:
+$ cd ~
+$~ ssh-keygen -t rsa -C "git_email@domain.com"
+Generating public/private rsa key pair.
+Enter file in which to save the key (/home/user/.ssh/id_rsa): [press enter]
+Enter passphrase: [need good password phrase]
+
+
+2. Copy your new SSH key
+$~ cat .ssh/id_rsa.pub
+ssh-rsa EXAMPLEstr1ngASDFASDFasdf1234LOTSOFCHARS...
+…CHARSCHARSCHARS...
+..ENdOfCH4Rs git_email@domain.com
+Copy the above long multi-line string from your terminal to the clipboard.
+
+
+3. Add new SSH key to Github.com
+Go to (be logged in already): https://github.com/settings/ssh
+Click: Add SSH key
+Name it whatever works for your environment.
+Paste the ssh-rsa string from above and click: Add key
+
+
+4. Create and add token
+Go to: https://github.com/settings/applications
+Click: Create new token
+Name the token. Copy the token string.
+
+Back to  your terminal:
+$~ git config --global github.user [git_username]
+$~ git config --global github.token [token_string]
+
+
+5. Test authentication and init RSA key
+Accept new key. Enter your pass when prompted.
+$~ ssh -T git@github.com
+
+
+6. Bash/shell additions
+Your .bashrc file will trigger a new file .ssh-agentrc
+
+
++ Append to file: ~/.bashrc
+
+# ssh-agent script for git
+if [ -f ~/.ssh-agentrc ]; then              
+        . ~/.ssh-agentrc
+fi
+
+
++ Create file: ~/.ssh-agentrc
+
+# .ssh-agentrc
+
+# Note: ~/.ssh/environment should not be used, as it
+#       already has a different purpose in SSH.
+
+env=~/.ssh/agent.env
+
+# Note: Don't bother checking SSH_AGENT_PID. It's not used
+#       by SSH itself, and it might even be incorrect
+#       (for example, when using agent-forwarding over SSH).
+
+agent_is_running() {
+    if [ "$SSH_AUTH_SOCK" ]; then
+        # ssh-add returns:
+        #   0 = agent running, has keys
+        #   1 = agent running, no keys
+        #   2 = agent not running
+        ssh-add -l >/dev/null 2>&1 || [ $? -eq 1 ]
+    else
+        false
+    fi
+}
+
+agent_has_keys() {
+    ssh-add -l >/dev/null 2>&1
+}
+
+agent_load_env() {
+    . "$env" >/dev/null
+}
+
+agent_start() {
+    (umask 077; ssh-agent >"$env")
+    . "$env" >/dev/null
+}
+
+if ! agent_is_running; then
+    agent_load_env
+fi
+
+if ! agent_is_running; then
+    agent_start
+    ssh-add
+elif ! agent_has_keys; then
+    ssh-add
+fi
+unset env
+
+
+7. Apply to your repo
+Change to your repo dir. Specify the user and repo name as seen below.
+$~ cd [/path/dir/repo_name]
+$ git config remote.origin.url git@github.com:[git_username]/[repo_name].git
+
+
+8. Activate .ssh-agent script
+Option 1: Log out of shell/terminal, log back in.
+Option 2:  $ cd ~; source .bashrc
+Enter passphrase for /home/user/.ssh/id_rsa: [git_pass]
+
+
+That’s it! Re-apply steps 7 and 8 for any additional repo.   :D
